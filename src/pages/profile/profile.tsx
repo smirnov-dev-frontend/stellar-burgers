@@ -1,41 +1,74 @@
-import { ProfileUI } from '@ui-pages';
 import { FC, SyntheticEvent, useEffect, useState } from 'react';
+import { ProfileUI } from '@ui-pages';
+
+import { useDispatch, useSelector } from '../../services/store';
+import { updateUser } from '../../services/slices/userSlice';
+import {
+  selectUpdateUserError,
+  selectUser
+} from '../../services/selectors/userSelectors';
 
 export const Profile: FC = () => {
-  /** TODO: взять переменную из стора */
-  const user = {
-    name: '',
-    email: ''
-  };
+  const dispatch = useDispatch();
+  const user = useSelector(selectUser);
+  const updateUserError = useSelector(selectUpdateUserError);
 
   const [formValue, setFormValue] = useState({
-    name: user.name,
-    email: user.email,
+    name: user?.name || '',
+    email: user?.email || '',
     password: ''
   });
 
   useEffect(() => {
-    setFormValue((prevState) => ({
-      ...prevState,
+    setFormValue({
       name: user?.name || '',
-      email: user?.email || ''
-    }));
+      email: user?.email || '',
+      password: ''
+    });
   }, [user]);
 
   const isFormChanged =
-    formValue.name !== user?.name ||
-    formValue.email !== user?.email ||
+    formValue.name !== (user?.name || '') ||
+    formValue.email !== (user?.email || '') ||
     !!formValue.password;
 
   const handleSubmit = (e: SyntheticEvent) => {
     e.preventDefault();
+
+    const updatedData: {
+      name?: string;
+      email?: string;
+      password?: string;
+    } = {};
+
+    if (formValue.name !== user?.name) {
+      updatedData.name = formValue.name;
+    }
+
+    if (formValue.email !== user?.email) {
+      updatedData.email = formValue.email;
+    }
+
+    if (formValue.password) {
+      updatedData.password = formValue.password;
+    }
+
+    dispatch(updateUser(updatedData)).then((result) => {
+      if (updateUser.fulfilled.match(result)) {
+        setFormValue((prev) => ({
+          ...prev,
+          password: ''
+        }));
+      }
+    });
   };
 
   const handleCancel = (e: SyntheticEvent) => {
     e.preventDefault();
+
     setFormValue({
-      name: user.name,
-      email: user.email,
+      name: user?.name || '',
+      email: user?.email || '',
       password: ''
     });
   };
@@ -51,7 +84,7 @@ export const Profile: FC = () => {
     <ProfileUI
       formValue={formValue}
       isFormChanged={isFormChanged}
-      updateUserError=''
+      updateUserError={updateUserError || ''}
       handleCancel={handleCancel}
       handleSubmit={handleSubmit}
       handleInputChange={handleInputChange}

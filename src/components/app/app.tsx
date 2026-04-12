@@ -21,10 +21,17 @@ import {
 import { useDispatch, useSelector } from '../../services/store';
 import { fetchIngredients } from '../../services/slices/ingredientsSlice';
 import {
+  getUser,
+  hasAccessToken,
+  setAuthChecked
+} from '../../services/slices/userSlice';
+import {
   selectIngredients,
   selectIngredientsError,
   selectIngredientsLoading
 } from '../../services/selectors/ingredientsSelectors';
+import { selectIsAuthChecked } from '../../services/selectors/userSelectors';
+import { ProtectedRoute } from '../protected-route';
 
 const App = () => {
   const dispatch = useDispatch();
@@ -32,10 +39,21 @@ const App = () => {
   const isIngredientsLoading = useSelector(selectIngredientsLoading);
   const ingredients = useSelector(selectIngredients);
   const error = useSelector(selectIngredientsError);
+  const isAuthChecked = useSelector(selectIsAuthChecked);
 
   useEffect(() => {
     dispatch(fetchIngredients());
+
+    if (hasAccessToken()) {
+      dispatch(getUser());
+    } else {
+      dispatch(setAuthChecked(true));
+    }
   }, [dispatch]);
+
+  if (!isAuthChecked && hasAccessToken()) {
+    return <Preloader />;
+  }
 
   return (
     <div className={styles.app}>
@@ -51,12 +69,33 @@ const App = () => {
         <Routes>
           <Route path='/' element={<ConstructorPage />} />
           <Route path='/feed' element={<Feed />} />
-          <Route path='/login' element={<Login />} />
-          <Route path='/register' element={<Register />} />
-          <Route path='/forgot-password' element={<ForgotPassword />} />
-          <Route path='/reset-password' element={<ResetPassword />} />
-          <Route path='/profile' element={<Profile />} />
-          <Route path='/profile/orders' element={<ProfileOrders />} />
+
+          <Route
+            path='/login'
+            element={<ProtectedRoute onlyUnAuth element={<Login />} />}
+          />
+          <Route
+            path='/register'
+            element={<ProtectedRoute onlyUnAuth element={<Register />} />}
+          />
+          <Route
+            path='/forgot-password'
+            element={<ProtectedRoute onlyUnAuth element={<ForgotPassword />} />}
+          />
+          <Route
+            path='/reset-password'
+            element={<ProtectedRoute onlyUnAuth element={<ResetPassword />} />}
+          />
+
+          <Route
+            path='/profile'
+            element={<ProtectedRoute element={<Profile />} />}
+          />
+          <Route
+            path='/profile/orders'
+            element={<ProtectedRoute element={<ProfileOrders />} />}
+          />
+
           <Route path='*' element={<NotFound404 />} />
         </Routes>
       ) : (

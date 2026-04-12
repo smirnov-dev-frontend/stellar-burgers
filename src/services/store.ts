@@ -6,9 +6,11 @@ import {
 } from 'react-redux';
 
 import ingredientsReducer from './slices/ingredientsSlice';
+import userReducer from './slices/userSlice';
 
 const rootReducer = combineReducers({
-  ingredients: ingredientsReducer
+  ingredients: ingredientsReducer,
+  user: userReducer
 });
 
 const store = configureStore({
