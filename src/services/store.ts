@@ -7,10 +7,12 @@ import {
 
 import ingredientsReducer from './slices/ingredientsSlice';
 import userReducer from './slices/userSlice';
+import feedReducer from './slices/feedSlice';
 
 const rootReducer = combineReducers({
   ingredients: ingredientsReducer,
-  user: userReducer
+  user: userReducer,
+  feed: feedReducer
 });
 
 const store = configureStore({
