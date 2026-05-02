@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import { getFeedsApi, getOrdersApi } from '@api';
+import { getFeedsApi, getOrderByNumberApi, getOrdersApi } from '@api';
 import { TOrder } from '@utils-types';
 
 type TFeedSummary = {
@@ -10,24 +10,30 @@ type TFeedSummary = {
 type TFeedState = {
   feedOrders: TOrder[];
   userOrders: TOrder[];
+  selectedOrder: TOrder | null;
   feedInfo: TFeedSummary;
   isFeedLoading: boolean;
   isUserOrdersLoading: boolean;
+  isSelectedOrderLoading: boolean;
   feedError: string | null;
   userOrdersError: string | null;
+  selectedOrderError: string | null;
 };
 
 const initialState: TFeedState = {
   feedOrders: [],
   userOrders: [],
+  selectedOrder: null,
   feedInfo: {
     total: 0,
     totalToday: 0
   },
   isFeedLoading: false,
   isUserOrdersLoading: false,
+  isSelectedOrderLoading: false,
   feedError: null,
-  userOrdersError: null
+  userOrdersError: null,
+  selectedOrderError: null
 };
 
 export const fetchFeedOrders = createAsyncThunk<
@@ -68,10 +74,35 @@ export const fetchUserOrders = createAsyncThunk<
   }
 });
 
+export const fetchOrderByNumber = createAsyncThunk<
+  TOrder,
+  number,
+  { rejectValue: string }
+>('feed/fetchOrderByNumber', async (number, { rejectWithValue }) => {
+  try {
+    const response = await getOrderByNumberApi(number);
+
+    if (response.success && response.orders.length > 0) {
+      return response.orders[0];
+    }
+
+    return rejectWithValue('Заказ не найден');
+  } catch (error) {
+    return rejectWithValue(
+      error instanceof Error ? error.message : 'Не удалось загрузить заказ'
+    );
+  }
+});
+
 const feedSlice = createSlice({
   name: 'feed',
   initialState,
-  reducers: {},
+  reducers: {
+    clearSelectedOrder(state) {
+      state.selectedOrder = null;
+      state.selectedOrderError = null;
+    }
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchFeedOrders.pending, (state) => {
@@ -102,8 +133,24 @@ const feedSlice = createSlice({
         state.isUserOrdersLoading = false;
         state.userOrdersError =
           action.payload ?? 'Не удалось загрузить историю заказов';
+      })
+
+      .addCase(fetchOrderByNumber.pending, (state) => {
+        state.isSelectedOrderLoading = true;
+        state.selectedOrderError = null;
+      })
+      .addCase(fetchOrderByNumber.fulfilled, (state, action) => {
+        state.isSelectedOrderLoading = false;
+        state.selectedOrder = action.payload;
+      })
+      .addCase(fetchOrderByNumber.rejected, (state, action) => {
+        state.isSelectedOrderLoading = false;
+        state.selectedOrderError =
+          action.payload ?? 'Не удалось загрузить заказ';
       });
   }
 });
+
+export const { clearSelectedOrder } = feedSlice.actions;
 
 export default feedSlice.reducer;
