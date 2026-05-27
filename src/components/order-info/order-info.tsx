@@ -1,25 +1,52 @@
-import { FC, useMemo } from 'react';
+import { FC, useEffect, useMemo } from 'react';
+import { useParams } from 'react-router-dom';
+
 import { Preloader } from '../ui/preloader';
 import { OrderInfoUI } from '../ui/order-info';
-import { TIngredient } from '@utils-types';
+import { TIngredient, TOrder } from '@utils-types';
+
+import { useDispatch, useSelector } from '../../services/store';
+import { selectIngredients } from '../../services/selectors/ingredientsSelectors';
+import {
+  selectFeedOrders,
+  selectSelectedOrder,
+  selectUserOrders
+} from '../../services/selectors/feedSelectors';
+import {
+  clearSelectedOrder,
+  fetchOrderByNumber
+} from '../../services/slices/feedSlice';
 
 export const OrderInfo: FC = () => {
-  /** TODO: взять переменные orderData и ingredients из стора */
-  const orderData = {
-    createdAt: '',
-    ingredients: [],
-    _id: '',
-    status: '',
-    name: '',
-    updatedAt: 'string',
-    number: 0
-  };
+  const dispatch = useDispatch();
+  const { number } = useParams();
 
-  const ingredients: TIngredient[] = [];
+  const ingredients = useSelector(selectIngredients);
+  const feedOrders = useSelector(selectFeedOrders);
+  const userOrders = useSelector(selectUserOrders);
+  const selectedOrder = useSelector(selectSelectedOrder);
 
-  /* Готовим данные для отображения */
+  const allOrders: TOrder[] = [...feedOrders, ...userOrders];
+
+  const orderFromStore =
+    allOrders.find((order) => order.number === Number(number)) || null;
+
+  const orderData = orderFromStore || selectedOrder;
+
+  useEffect(() => {
+    if (!orderFromStore && number) {
+      dispatch(fetchOrderByNumber(Number(number)));
+    }
+
+    return () => {
+      dispatch(clearSelectedOrder());
+    };
+  }, [dispatch, number, orderFromStore]);
+
   const orderInfo = useMemo(() => {
-    if (!orderData || !ingredients.length) return null;
+    if (!orderData || !ingredients.length) {
+      return null;
+    }
 
     const date = new Date(orderData.createdAt);
 
@@ -31,6 +58,7 @@ export const OrderInfo: FC = () => {
       (acc: TIngredientsWithCount, item) => {
         if (!acc[item]) {
           const ingredient = ingredients.find((ing) => ing._id === item);
+
           if (ingredient) {
             acc[item] = {
               ...ingredient,
@@ -38,7 +66,7 @@ export const OrderInfo: FC = () => {
             };
           }
         } else {
-          acc[item].count++;
+          acc[item].count += 1;
         }
 
         return acc;
